@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AMApplicationBuild</key>
+	<string>247</string>
+	<key>AMApplicationVersion</key>
+	<string>2.1</string>
+	<key>AMDocumentVersion</key>
+	<string>2</string>
+	<key>actions</key>
+	<array>
+		<dict>
+			<key>action</key>
+			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>1.0</string>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.applescript.object</string>
+					</array>
+				</dict>
+				<key>ActionBundlePath</key>
+				<string>/System/Library/Automator/Run AppleScript.action</string>
+				<key>ActionName</key>
+				<string>Run AppleScript</string>
+				<key>ActionParameters</key>
+				<dict>
+					<key>source</key>
+					<string>on ShowGrowlNote(theTitle, theDescription)	tell application "GrowlHelperApp"		notify with name "Note" title theTitle description theDescription application name "PictureUploadViaTwitterAccount"	end tell	set msg to ""end ShowGrowlNoteon run {input, parameters}	-- Make sure only one image was selected	if (count of input) is not equal to 1 then		display alert "You can only upload one picture at a time."		return input	end if		-- Check if Growl is installed	tell application "System Events" to set GrowlExists to exists application process "GrowlHelperApp"	if GrowlExists then		tell application "GrowlHelperApp" to register as application "PictureUploadViaTwitterAccount" all notifications {"Note"} default notifications {"Note"}	end if		-- Select service	tell application "System Events"		activate -- make sure the dialog is in the front		set upload_services to {"img.ly", "Posterous", "Twitgoo", "Twitpic", "Yfrog"}		set chosen_service to (choose from list upload_services with prompt ("• Pick your upload service:") default items {"img.ly"}) as string		if the chosen_service is "false" then error number -128	end tell		set info to ("• Upload service: " &amp; chosen_service) &amp; return		-- Just upload or upload and post?	tell application "System Events"		activate -- make sure the dialog is in the front		set upload_type to (choose from list {"Just upload picture", "Upload picture and also post to Twitter"} with prompt (info &amp; return &amp; "• Do you want to also post the picture as a status update to Twitter?") default items {"Just upload picture"}) as string		if the upload_type is "false" then error number -128	end tell		-- Figure out which URL to use	if the chosen_service is "Yfrog" then		set UPLOAD_URL to "http://yfrog.com/api/"	else if the chosen_service is "Twitpic" then		set UPLOAD_URL to "http://twitpic.com/api/"	else if the chosen_service is "Posterous" then		set UPLOAD_URL to "http://posterous.com/api/"	else if the chosen_service is "img.ly" then		set UPLOAD_URL to "http://img.ly/api/"	else if the chosen_service is "Twitgoo" then		set UPLOAD_URL to "http://twitgoo.com/api/"	end if		if upload_type is "Just upload picture" then		set UPLOAD_URL to UPLOAD_URL &amp; "upload"		set message_option to ""		set info to info &amp; return &amp; "• Just upload picture, thank you." &amp; return	else		set UPLOAD_URL to UPLOAD_URL &amp; "uploadAndPost"		tell application "System Events"			activate -- make sure the dialog is in the front			set message to the text returned of (display dialog (info &amp; return &amp; "• Enter your Twitter status update:") default answer "")		end tell		set message_option to "-F \"" &amp; message &amp; "\""		set info to info &amp; return &amp; "• Upload picture and also post to Twitter: " &amp; message &amp; return	end if		-- Obtain the source file path	set sourceFile to item 1 of input	set sourceFile to POSIX path of sourceFile		-- Username	tell application "System Events"		activate -- make sure the dialog is in the front		set username to the text returned of (display dialog (info &amp; return &amp; "• Enter your Twitter ID:") default answer "")	end tell		set info to info &amp; return &amp; "• Twitter ID: " &amp; username &amp; return		-- Password	tell application "System Events"		activate -- make sure the dialog is in the front		set passwd to text returned of (display dialog (info &amp; return &amp; "• Finally, enter your password:") default answer "" buttons {"Cancel", "Upload"} default button "Upload" cancel button "Cancel" with hidden answer)	end tell		-- Send a notification...	if GrowlExists then		ShowGrowlNote(chosen_service, "Upload started...")	end if		-- Send request to service	set curlCMD to "curl -F username=\"" &amp; username &amp; "\" -F password=\"" &amp; passwd &amp; "\" " &amp; message_option &amp; " -F media=\"@" &amp; sourceFile &amp; "\" \"" &amp; UPLOAD_URL &amp; "\""	set xmlResponse to (do shell script curlCMD) as string		-- Analyse service's response	try		tell application "System Events"			set xmlDocument to make new XML data with data xmlResponse as string			tell XML element 1 of contents of xmlDocument				set pic_url to (value of (XML elements whose name is "mediaurl")) as string			end tell		end tell		if pic_url is not equal to "" then			tell application "Finder" to set the clipboard to pic_url						-- Send a notification...			if GrowlExists then				ShowGrowlNote(chosen_service, "Success! URL copied to clipboard:" &amp; return &amp; pic_url)			else				display alert "Success!" message "URL copied to clipboard:" &amp; return &amp; pic_url			end if						return pic_url		else			tell application "System Events"				set xmlDocument to make new XML data with data xmlResponse as string				tell XML element 1 of contents of xmlDocument					set error_message to (value of XML attribute "msg" of (XML elements whose name is "err")) as string				end tell			end tell			display alert "Picture Upload Error" message error_message as warning		end if			on error		display alert "Picture Upload Upload Error" message "The picture could not be uploaded." as warning	end try		return input	end run</string>
+				</dict>
+				<key>Application</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>BundleIdentifier</key>
+				<string>com.apple.Automator.RunScript</string>
+				<key>CFBundleVersion</key>
+				<string>1.0</string>
+				<key>CanShowSelectedItemsWhenRun</key>
+				<false/>
+				<key>CanShowWhenRun</key>
+				<true/>
+				<key>Category</key>
+				<array>
+					<string>AMCategoryUtilities</string>
+				</array>
+				<key>Class Name</key>
+				<string>RunScriptAction</string>
+				<key>InputUUID</key>
+				<string>87E9B73D-DB66-47D2-BEAD-361DCF14AB75</string>
+				<key>Keywords</key>
+				<array>
+					<string>Run</string>
+				</array>
+				<key>OutputUUID</key>
+				<string>1F83B395-2DDC-435F-8FFF-745815BD3E50</string>
+				<key>UUID</key>
+				<string>EC9D4031-A5F9-423F-9F48-AB0F1CA48E79</string>
+				<key>UnlocalizedApplications</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>arguments</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>default value</key>
+						<string>on run {input, parameters}
+	
+	(* Your script goes here *)
+	
+	return input
+end run</string>
+						<key>name</key>
+						<string>source</string>
+						<key>required</key>
+						<string>0</string>
+						<key>type</key>
+						<string>0</string>
+						<key>uuid</key>
+						<string>0</string>
+					</dict>
+				</dict>
+				<key>isViewVisible</key>
+				<true/>
+				<key>location</key>
+				<string>769.500000:776.000000</string>
+				<key>nibPath</key>
+				<string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/English.lproj/main.nib</string>
+			</dict>
+			<key>isViewVisible</key>
+			<true/>
+		</dict>
+	</array>
+	<key>connectors</key>
+	<dict/>
+	<key>state</key>
+	<dict>
+		<key>AMLogTabViewSelectedIndex</key>
+		<integer>0</integer>
+		<key>libraryState</key>
+		<dict>
+			<key>actionsMajorSplitViewState</key>
+			<dict>
+				<key>expandedPosition</key>
+				<real>241</real>
+				<key>subviewState</key>
+				<array>
+					<string>0.000000, 0.000000, 381.000000, 736.000000, NO</string>
+					<string>0.000000, 737.000000, 381.000000, 240.000000, NO</string>
+				</array>
+			</dict>
+			<key>actionsMinorSplitViewState</key>
+			<dict>
+				<key>expandedPosition</key>
+				<real>0.0</real>
+				<key>subviewState</key>
+				<array>
+					<string>0.000000, 0.000000, 163.000000, 736.000000, NO</string>
+					<string>164.000000, 0.000000, 217.000000, 736.000000, NO</string>
+				</array>
+			</dict>
+			<key>variablesMajorSplitViewState</key>
+			<dict>
+				<key>expandedPosition</key>
+				<real>0.0</real>
+				<key>subviewState</key>
+				<array>
+					<string>0.000000, 0.000000, 350.000000, 555.000000, NO</string>
+					<string>0.000000, 556.000000, 350.000000, 148.000000, NO</string>
+				</array>
+			</dict>
+			<key>variablesMinorSplitViewState</key>
+			<dict>
+				<key>expandedPosition</key>
+				<real>0.0</real>
+				<key>subviewState</key>
+				<array>
+					<string>0.000000, 0.000000, 163.000000, 555.000000, NO</string>
+					<string>164.000000, 0.000000, 186.000000, 555.000000, NO</string>
+				</array>
+			</dict>
+		</dict>
+		<key>majorSplitViewState</key>
+		<dict>
+			<key>expandedPosition</key>
+			<real>0.0</real>
+			<key>subviewState</key>
+			<array>
+				<string>0.000000, 0.000000, 381.000000, 1022.000000, NO</string>
+				<string>382.000000, 0.000000, 1539.000000, 1022.000000, NO</string>
+			</array>
+		</dict>
+		<key>minorSplitViewState</key>
+		<dict>
+			<key>expandedPosition</key>
+			<real>0.0</real>
+			<key>subviewState</key>
+			<array>
+				<string>0.000000, 0.000000, 1539.000000, 831.000000, NO</string>
+				<string>0.000000, 841.000000, 1539.000000, 162.000000, NO</string>
+			</array>
+		</dict>
+		<key>windowFrame</key>
+		<string>{{0, 79}, {1920, 1099}}</string>
+		<key>workflowViewScrollPosition</key>
+		<string>{{0, 0}, {1539, 831}}</string>
+	</dict>
+	<key>workflowMetaData</key>
+	<dict>
+		<key>serviceInputTypeIdentifier</key>
+		<string>com.apple.Automator.fileSystemObject.image</string>
+		<key>serviceOutputTypeIdentifier</key>
+		<string>com.apple.Automator.nothing</string>
+		<key>workflowTypeIdentifier</key>
+		<string>com.apple.Automator.servicesMenu</string>
+	</dict>
+</dict>
+</plist>
